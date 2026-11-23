@@ -93,7 +93,7 @@ const P={
 let db={sessions:[],draft:null,custom:[]},tab="logg",sel="",armed=false,msg="",nt="",pk=false,q="",cloud=null,qp=Promise.resolve();
 try{const s=JSON.parse(localStorage.getItem("sl")||"null");if(s&&s.sessions)db=s}catch(e){}db.custom=db.custom||[];if(db.programs){for(const k in P)delete P[k];Object.assign(P,db.programs)}db.programs=P;db.ren=db.ren||{};db.sessions.forEach(s=>{if(s.name==="Tom økt")s.name="Friøkt"});if(db.draft&&db.draft.name==="Tom økt")db.draft.name="Friøkt";
 const save=()=>{try{localStorage.setItem("sl",JSON.stringify(db))}catch(e){}if(cloud){const j=JSON.stringify(db);qp=qp.then(()=>cloud.set({json:j,at:Date.now()})).catch(()=>{})}};
-function merge(o){const ids=new Set(db.sessions.map(s=>s.id));(o.sessions||[]).forEach(s=>{if(!ids.has(s.id))db.sessions.push(s)});db.sessions.sort((a,b)=>a.id-b.id);db.custom=[...new Set([...db.custom,...(o.custom||[])])];if(o.programs)for(const k in o.programs)if(!P[k])P[k]=o.programs[k]}
+function merge(o){const ids=new Set(db.sessions.map(s=>s.id));(o.sessions||[]).forEach(s=>{if(!ids.has(s.id))db.sessions.push(s)});db.sessions.sort((a,b)=>a.id-b.id);db.custom=[...new Set([...db.custom,...(o.custom||[])])];if(o.programs)for(const k in o.programs)if(!P[k])P[k]=o.programs[k];if(o.restEx){db.restEx=db.restEx||{};for(const k in o.restEx)if(!(k in db.restEx))db.restEx[k]=o.restEx[k]}if(o.ren)db.ren=Object.assign({},o.ren,db.ren||{})}
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -101,13 +101,13 @@ const e1=(w,r)=>w*(1+r/30);
 const fmt=d=>new Date(d).toLocaleDateString("nb-NO",{day:"numeric",month:"short"});
 const kg=n=>(Math.round(n*10)/10).toString().replace(".",",");
 function lastSets(ex){for(let i=db.sessions.length-1;i>=0;i--){const e=db.sessions[i].entries.find(x=>x.ex===ex);if(e&&e.sets.length)return e.sets}return null}
-function go(t){tab=t;armed=false;nt="";render();window.scrollTo(0,0)}
+function go(t){tab=t;armed=false;nt="";vs=null;render();window.scrollTo(0,0)}
 function start(n){if(db.draft){go("logg");return}pk=!P[n];db.draft={t0:Date.now(),name:n,entries:(P[n]||[]).map(s=>{const a=s.split("|");return{ex:a[0],t:a[1],sets:[]}})};save();go("logg")}
 function addSet(i){const w=parseFloat($("#w"+i).value.replace(",",".")),r=parseInt($("#r"+i).value);
 if(isNaN(w)||!(r>0)){msg="Fyll inn vekt og reps";render();return}
-msg="";pre=null;db.draft.entries[i].sets.push({w,r});save();render();if(rs().auto)tStart()}
+msg="";pre=null;db.draft.entries[i].sets.push({w,r});save();render();if(rs().auto)tStart(exRest(db.draft.entries[i].ex))}
 function rmSet(i,j){db.draft.entries[i].sets.splice(j,1);save();render()}
-function addEx(n){if(!db.draft.entries.some(e=>e.ex===n))db.draft.entries.unshift({ex:n,t:"",sets:[]});pk=false;save();render()}
+function addEx(n){if(!db.draft.entries.some(e=>e.ex===n))db.draft.entries.push({ex:n,t:"",sets:[]});pk=false;save();render()}
 function addCustom(n){if(!db.custom.includes(n))db.custom.push(n);addEx(n)}
 const CAT=["Knebøy","Benkpress","Markløft","Skulderpress","Militærpress","Pull-ups","Chins","Skråro","Roing med stang","Nedtrekk","Rumensk markløft","Benpress","Utfall","Bulgarsk splittknebøy","Hip thrust","Tåhev","Sidehev","Face pull","Bicepscurl","Triceps pushdown","Skråbenk hantler","Hantelpress","Dips","Kabelfly","Leg curl","Leg extension","Planke","Farmers walk","Kettlebell swing"];
 function ranked(){const c={};db.sessions.forEach(s=>s.entries.forEach(e=>c[e.ex]=(c[e.ex]||0)+1));return [...new Set([...CAT.map(x=>(db.ren||{})[x]||x),...db.custom,...Object.keys(c)])].map(n=>({n,c:c[n]||0})).sort((a,b)=>b.c-a.c||a.n.localeCompare(b.n,"nb"))}
@@ -125,28 +125,29 @@ return '<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="Estimert 1RM over 
 pts.map((q,i)=>'<circle cx="'+X(i)+'" cy="'+Y(q.v)+'" r="3.5" fill="var(--ac)"/>').join("")+
 '<text x="2" y="'+(Y(hi)+4)+'" font-size="14" fill="var(--mut)">'+Math.round(hi)+'</text><text x="2" y="'+(Y(lo)+4)+'" font-size="14" fill="var(--mut)">'+Math.round(lo)+'</text></svg>'}
 function vLogg(){
-if(!db.draft)return '<h1>Økt</h1><div class="card"><p>Ingen aktiv økt.</p><div class="row"><button onclick="go(\'prog\')">Velg program</button><button class="g" onclick="start(\'Friøkt\')">Friøkt</button></div></div>'+
+if(!db.draft)return '<h1>Økt</h1>'+bkBanner()+'<div class="card"><p>Ingen aktiv økt.</p><div class="row"><button onclick="go(\'prog\')">Velg program</button><button class="g" onclick="start(\'Friøkt\')">Friøkt</button></div></div>'+
 (db.sessions.length?'<p class="mut">Sist: '+esc(db.sessions[db.sessions.length-1].name)+", "+fmt(db.sessions[db.sessions.length-1].date)+"</p>":"");
-const d=db.draft;let h='<h1>'+esc(d.name)+"</h1>";if(d.editId)h+='<div class="card"><input id="nm" value="'+esc(d.name)+'" aria-label="Navn"><div style="height:8px"></div><input id="dt" type="date" value="'+day(d.date)+'" aria-label="Dato"></div>';h+="%%PK%%";
+const d=db.draft;let h='<h1>'+esc(d.name)+"</h1>";if(d.editId)h+='<div class="card"><input id="nm" value="'+esc(d.name)+'" aria-label="Navn"><div style="height:8px"></div><input id="dt" type="date" value="'+day(d.date)+'" aria-label="Dato"></div>';
 d.entries.forEach((e,i)=>{
-const prev=lastSets(e.ex),cur=(pre&&pre.i===i&&pre)||e.sets[e.sets.length-1]||(prev&&prev[prev.length-1]);
+const prev=lastSets(e.ex),cur=(pre&&pre.i===i&&pre)||e.sets[e.sets.length-1]||(prev&&prev[prev.length-1]);const prevB=prevBest(e.ex,d.editId||Infinity);
 h+='<div class="card"><div class="row sp"><h3>'+esc(e.ex)+'</h3><span class="mut">'+esc(e.t)+'</span><button class="g" aria-label="Slett øvelse" onclick="rmEx('+i+')">Slett</button></div>'+
 (prev?'<div class="mut">Sist: '+prev.map(s=>kg(s.w)+"×"+s.r).join(", ")+"</div>":"")+
-'<div class="sets">'+e.sets.map((s,j)=>'<span class="chip"><button class="num" style="background:none;color:inherit;padding:2px 4px" aria-label="Rediger sett" onclick="edSet('+i+","+j+')">'+kg(s.w)+" × "+s.r+'</button><button aria-label="Fjern sett" onclick="rmSet('+i+","+j+')">×</button></span>').join("")+"</div>"+
-'<div class="row" style="align-items:flex-end"><div style="flex:1"><div class="mut" style="font-size:14px">kg</div><input id="w'+i+'" inputmode="decimal" placeholder="kg" aria-label="Vekt i kg" value="'+(cur?kg(cur.w):"")+'"></div><div style="flex:1"><div class="mut" style="font-size:14px">reps</div><input id="r'+i+'" inputmode="numeric" placeholder="reps" aria-label="Repetisjoner" value="'+(cur?cur.r:"")+'"></div><button onclick="addSet('+i+')">Legg til sett</button></div></div>'});
+'<div class="sets">'+e.sets.map((s,j)=>'<span class="chip"><button class="num" style="background:none;color:inherit;padding:2px 4px" aria-label="Rediger sett" onclick="edSet('+i+","+j+')">'+kg(s.w)+" × "+s.r+(prevB>0&&e1(s.w,s.r)>Math.max(prevB,...e.sets.slice(0,j).map(x=>e1(x.w,x.r)))?' <span class="pr">★</span>':"")+'</button><button aria-label="Fjern sett" onclick="rmSet('+i+","+j+')">×</button></span>').join("")+"</div>"+
+'<div class="row" style="margin:6px 0"><span class="mut">Pause</span><button class="g" style="padding:6px 12px" onclick="exR('+i+',-30)">−</button><b>'+mmss(exRest(e.ex))+'</b><button class="g" style="padding:6px 12px" onclick="exR('+i+',30)">+</button></div>'+
+'<div class="row" style="align-items:flex-start"><div style="flex:1"><div class="mut" style="font-size:14px">kg</div><input id="w'+i+'" inputmode="decimal" placeholder="kg" aria-label="Vekt i kg" value="'+(cur?kg(cur.w):"")+'"><div class="row" style="margin-top:6px"><button class="g" style="flex:1;padding:8px 4px" onclick="adjW('+i+',-2.5)">−2,5</button><button class="g" style="flex:1;padding:8px 4px" onclick="adjW('+i+',2.5)">+2,5</button></div></div><div style="flex:1"><div class="mut" style="font-size:14px">reps</div><input id="r'+i+'" inputmode="numeric" placeholder="reps" aria-label="Repetisjoner" value="'+(cur?cur.r:"")+'"><div class="row" style="margin-top:6px"><button class="g" style="flex:1;padding:8px 4px" onclick="adjR('+i+',-1)">−1</button><button class="g" style="flex:1;padding:8px 4px" onclick="adjR('+i+',1)">+1</button></div></div></div><button style="width:100%;margin-top:8px" onclick="addSet('+i+')">Legg til sett</button></div>'});
 
-const pkh=pk?'<div class="card"><div class="row"><input id="q" placeholder="Søk eller skriv egen øvelse" value="'+esc(q)+'" oninput="q=this.value;$(\'#pl\').innerHTML=plist()"><button class="g" onclick="pk=false;render()">Ferdig</button></div><div id="pl" style="max-height:280px;overflow:auto;margin-top:8px">'+plist()+'</div></div>':'<button class="g" onclick="pk=true;q=\'\';render()">+ Legg til øvelse</button>';h+='<div class="row" style="margin-top:12px"><label class="mut" for="dur">Varighet (min)</label><input id="dur" inputmode="numeric" style="width:90px" placeholder="'+(d.dur?Math.round(d.dur/60):"auto")+'"></div>';
+h+=pk?'<div class="card"><div class="row"><input id="q" placeholder="Søk eller skriv egen øvelse" value="'+esc(q)+'" oninput="q=this.value;$(\'#pl\').innerHTML=plist()"><button class="g" onclick="pk=false;render()">Ferdig</button></div><div id="pl" style="max-height:280px;overflow:auto;margin-top:8px">'+plist()+'</div></div>':'<button class="g" onclick="pk=true;q=\'\';render()">+ Legg til øvelse</button>';h+='<div class="row" style="margin-top:12px"><label class="mut" for="dur">Varighet (min)</label><input id="dur" inputmode="numeric" style="width:90px" placeholder="'+(d.dur?Math.round(d.dur/60):"auto")+'"></div>';
 if(msg)h+='<p class="pr" role="alert">'+msg+"</p>";
 h+='<div class="row" style="margin-top:14px"><button onclick="finish()">'+(d.editId?"Lagre endringer":"Fullfør økt")+'</button><button class="g" onclick="drop()">'+(armed?"Trykk igjen for å forkaste":"Forkast")+"</button></div>";
-return h.replace("%%PK%%",()=>pkh)}
+return h}
 function vProg(){let h="<h1>Program</h1>";
 for(const n in P){h+='<div class="card"><div class="row sp"><h3>'+n+'</h3><button onclick="start(\''+n+'\')">Start økt</button></div><ul class="mut" style="margin:8px 0 0;padding-left:18px">'+P[n].map(s=>{const a=s.split("|");return"<li>"+a[0]+" – "+a[1]+"</li>"}).join("")+"</ul></div>"}
 return h}
-function vFrem(){const S=db.sessions;let h="<h1>Fremgang</h1>";const vsx=vs&&S.find(x=>x.id===vs);if(vsx)return vDet(vsx);vs=null;
+function vFrem(){const S=db.sessions;let h="<h1>Fremgang</h1>"+bkBanner();const vsx=vs&&S.find(x=>x.id===vs);if(vsx)return vDet(vsx);vs=null;
 if(!S.length)return h+'<div class="card"><p>Ingen fullførte økter ennå. Start en økt under Program, så dukker rekorder og kurver opp her.</p></div>';
 const wk=S.filter(s=>Date.now()-new Date(s.date)<7*864e5).length;
 h+='<div class="row"><div class="card" style="flex:1"><div class="num big">'+S.length+'</div><div class="mut">økter totalt</div></div><div class="card" style="flex:1"><div class="num big">'+wk+'</div><div class="mut">siste 7 dager</div></div></div>';
-const exs=[...new Set(S.flatMap(s=>s.entries.map(e=>e.ex)))];if(!exs.includes(sel))sel=exs[0];
+h+=vWeek(S);const exs=[...new Set(S.flatMap(s=>s.entries.map(e=>e.ex)))];if(!exs.includes(sel))sel=exs[0];
 h+='<select aria-label="Velg øvelse" onchange="pick(this.value)">'+exs.map(x=>'<option'+(x===sel?" selected":"")+' value="'+esc(x)+'">'+esc(x)+"</option>").join("")+"</select>";
 const pts=[];let top=null,best=0;
 S.forEach(s=>{const e=s.entries.find(x=>x.ex===sel);if(!e)return;let b=0;e.sets.forEach(t=>{const v=e1(t.w,t.r);if(v>b)b=v;if(!top||t.w>top.w||(t.w===top.w&&t.r>top.r))top=t});if(b>best)best=b;pts.push({v:b})});
@@ -185,12 +186,12 @@ return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi</h3><p class="mut">'+(
 '<div class="card"><h3>Regneark</h3><p class="mut">CSV åpnes i Excel, Numbers og Google Sheets.</p><button onclick="exCsv()">Last ned CSV</button></div>'+
 '<div class="card"><h3>intervals.icu</h3><p class="mut">FIT-fil med sett, reps, vekt og varighet, pakket i en zip som intervals.icu tar imot.</p>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><button onclick="exFit()">Last ned for intervals.icu</button>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
 let pre=null,dz=0;
-function jsonText(){return JSON.stringify({sessions:db.sessions,custom:db.custom,programs:db.programs,ren:db.ren},null,1)}
+function jsonText(){return JSON.stringify({sessions:db.sessions,custom:db.custom,programs:db.programs,ren:db.ren,restEx:db.restEx},null,1)}
 function csvText(){const c=v=>'"'+String(v).replace(/"/g,'""')+'"';let o=["Dato","Økt","Øvelse","Sett","Reps","Vekt kg","Volum kg","Est. 1RM kg"].map(c).join(";");db.sessions.forEach(s=>s.entries.forEach(e=>e.sets.forEach((t,i)=>{o+="\r\n"+[day(s.date),s.name,e.ex,i+1,t.r,kg(t.w),kg(t.w*t.r),kg(e1(t.w,t.r))].map(c).join(";")})));return"\uFEFF"+o}
-async function dl(name,data){const ty=/\.csv$/.test(name)?"text/csv":/\.json$/.test(name)?"application/json":"application/octet-stream";const blob=new Blob([data],{type:ty});try{const f=new File([blob],name,{type:ty});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});nt="Delt "+name;render();return}}catch(e){if(e&&e.name==="AbortError"){nt="Avbrutt";render();return}}
+async function dl(name,data,mark){const ty=/\.csv$/.test(name)?"text/csv":/\.json$/.test(name)?"application/json":"application/octet-stream";const blob=new Blob([data],{type:ty});try{const f=new File([blob],name,{type:ty});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});nt="Delt "+name;if(mark){db.lastBackup=new Date().toISOString();save()}render();return}}catch(e){if(e&&e.name==="AbortError"){nt="Avbrutt";render();return}}
 try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();nt="Prøvde å laste ned "+name+". Skjedde ingenting, bruk Kopier."}catch(e){nt="Fildeling støttes ikke her. Bruk Kopier."}render()}
-async function cp(t){try{await navigator.clipboard.writeText(t);nt="Kopiert"}catch(e){try{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();document.execCommand("copy");x.remove();nt="Kopiert"}catch(e2){nt="Kunne ikke kopiere"}}render()}
-function exJson(){dl("styrkelogg-"+day(Date.now())+".json",jsonText())}
+async function cp(t,mark){try{await navigator.clipboard.writeText(t);nt="Kopiert";if(mark){db.lastBackup=new Date().toISOString();save()}}catch(e){try{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();document.execCommand("copy");x.remove();nt="Kopiert";if(mark){db.lastBackup=new Date().toISOString();save()}}catch(e2){nt="Kunne ikke kopiere"}}render()}
+function exJson(){dl("styrkelogg-"+day(Date.now())+".json",jsonText(),true)}
 function exCsv(){dl("styrkelogg.csv",csvText())}
 function fitFor(){const s=db.sessions.find(x=>String(x.id)===$("#fs").value);return s?{s,d:day(s.date)}:null}
 function exFit(){const f=fitFor();if(f)dl("styrkeokt-"+f.d+".fit",fit(f.s))}
@@ -202,7 +203,7 @@ function rmEx(i){db.draft.entries.splice(i,1);pre=null;save();render()}
 function edit(id){if(db.draft){nt="Fullfør eller forkast pågående økt først";render();return}const s=db.sessions.find(x=>x.id===id);if(!s)return;db.draft={editId:id,date:s.date,dur:s.dur,name:s.name,entries:s.entries.map(e=>({ex:e.ex,t:e.t||"",sets:e.sets.map(t=>({w:t.w,r:t.r}))}))};pk=false;save();go("logg")}
 function delS(id){if(dz!==id){dz=id;render();return}db.sessions=db.sessions.filter(s=>s.id!==id);dz=0;nt="Slettet økt";save();render()}
 function vData(){const S=db.sessions.slice(-20).reverse();
-return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi (JSON)</h3><p class="mut">Loggen ligger kun i denne visningen. Ta jevnlig backup.</p><div class="row"><button onclick="exJson()">Del / lagre</button><button class="g" onclick="cp(jsonText())">Kopier</button></div><p class="mut">Gjenopprett: velg JSON-fil.</p><input type="file" accept=".json,application/json,text/plain" onchange="imFile(this.files[0])"><p class="mut">Eller lim inn JSON her:</p><textarea id="ij" rows="3" placeholder="Lim inn JSON" style="width:100%;background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit"></textarea><div style="height:8px"></div><button onclick="imTxt()">Importer</button></div>'+
+return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi (JSON)</h3><p class="mut">'+(db.lastBackup?"Siste backup: "+fmt(db.lastBackup)+".":"Ingen backup tatt ennå.")+' Loggen ligger kun på denne telefonen.</p><div class="row"><button onclick="exJson()">Del / lagre</button><button class="g" onclick="cp(jsonText(),1)">Kopier</button></div><p class="mut">Gjenopprett: velg JSON-fil.</p><input type="file" accept=".json,application/json,text/plain" onchange="imFile(this.files[0])"><p class="mut">Eller lim inn JSON her:</p><textarea id="ij" rows="3" placeholder="Lim inn JSON" style="width:100%;background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit"></textarea><div style="height:8px"></div><button onclick="imTxt()">Importer</button></div>'+
 '<div class="card"><h3>Pausetimer</h3><p class="mut">Pausetid stilles med − og + i timeren nederst (30 sek-steg) og huskes. «Start pause» starter også Klokke-timeren via snarveien «Pause».</p><button class="g" onclick="tAuto()">Start automatisk etter sett: '+((db.rest||{}).auto!==false?"på":"av")+'</button></div>'+
 '<div class="card"><h3>Endre navn på øvelse</h3><select id="rn0" aria-label="Øvelse">'+ranked().map(x=>'<option value="'+esc(x.n)+'">'+esc(x.n)+"</option>").join("")+'</select><div style="height:8px"></div><input id="rn1" placeholder="Nytt navn" aria-label="Nytt navn"><div style="height:8px"></div><button onclick="renEx()">Endre navn</button></div>'+
 '<div class="card"><h3>Regneark (CSV)</h3><div class="row"><button onclick="exCsv()">Del / lagre</button><button class="g" onclick="cp(csvText())">Kopier</button></div></div>'+
@@ -224,7 +225,7 @@ function renEx(){const o=$("#rn0").value,n=$("#rn1").value.trim();if(!o||!n||o==
 const f=a=>a.forEach(e=>{if(e.ex===o)e.ex=n});db.sessions.forEach(s=>f(s.entries));if(db.draft)f(db.draft.entries);
 for(const k in P)P[k]=P[k].map(s=>{const a=s.split("|");return(a[0]===o?n:a[0])+"|"+(a[1]||"")});
 db.custom=[...new Set(db.custom.map(x=>x===o?n:x))];db.ren=db.ren||{};for(const k in db.ren)if(db.ren[k]===o)db.ren[k]=n;if(CAT.includes(o))db.ren[o]=n;
-nt="Byttet navn: "+o+" → "+n;save();render()}
+if(db.restEx&&db.restEx[o]){db.restEx[n]=db.restEx[o];delete db.restEx[o]}nt="Byttet navn: "+o+" → "+n;save();render()}
 function vProg(){
 if(pr)return '<h1>Program</h1><div class="card"><input id="pn" aria-label="Navn på program" value="'+esc(pr.name)+'">'+pr.rows.map((r,i)=>'<div class="row" style="margin-top:8px"><input id="pe'+i+'" list="dx" placeholder="Øvelse" aria-label="Øvelse" value="'+esc(r[0])+'"><input id="pt'+i+'" placeholder="3×8" aria-label="Sett og reps" style="width:36%" value="'+esc(r[1])+'"><button class="g" aria-label="Fjern" onclick="pRm('+i+')">×</button></div>').join("")+'<datalist id="dx">'+ranked().map(x=>'<option value="'+esc(x.n)+'">').join("")+'</datalist><div class="row" style="margin-top:10px"><button class="g" onclick="pAdd()">+ Øvelse</button></div></div><div class="row"><button onclick="pSave()">Lagre</button><button class="g" onclick="pCancel()">Avbryt</button>'+(pe?'<button class="g" onclick="pDel()">'+(pdz===pe?"Trykk igjen for å slette":"Slett program")+'</button>':"")+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"");
 let h="<h1>Program</h1>";
@@ -234,7 +235,7 @@ let vs=null;
 function showS(id){vs=id;render()}
 function vDet(s){const vol=s.entries.reduce((a,e)=>a+e.sets.reduce((b,t)=>b+t.w*t.r,0),0);
 return '<button class="g" onclick="vs=null;render()">← Tilbake</button><h1 style="margin-top:12px">'+esc(s.name)+'</h1><div class="mut" style="margin-bottom:12px">'+fmt(s.date)+(s.dur?" · "+Math.round(s.dur/60)+" min":"")+'</div>'+
-s.entries.map(e=>'<div class="card"><h3>'+esc(e.ex)+'</h3><div class="sets">'+e.sets.map(t=>'<span class="chip" style="padding-right:10px"><span class="num">'+kg(t.w)+" × "+t.r+"</span></span>").join("")+"</div></div>").join("")+
+s.entries.map(e=>{const pb=prevBest(e.ex,s.id);return'<div class="card"><h3>'+esc(e.ex)+'</h3><div class="sets">'+e.sets.map((t,j)=>'<span class="chip" style="padding-right:10px"><span class="num">'+kg(t.w)+" × "+t.r+(pb>0&&e1(t.w,t.r)>Math.max(pb,...e.sets.slice(0,j).map(x=>e1(x.w,x.r)))?' <span class="pr">★</span>':"")+"</span></span>").join("")+"</div></div>"}).join("")+
 '<p class="mut">Totalt løftet: '+Math.round(vol).toLocaleString("nb-NO")+' kg</p><div class="row"><button onclick="edit('+s.id+')">Rediger</button></div>'}
 let tm={st:"idle",end:0,tot:0,iv:null,last:-1},ac=null,wl=null;
 function rs(){return db.rest||(db.rest={sec:90,auto:true})}
@@ -242,8 +243,8 @@ function mmss(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s
 function beep(f,d,t0){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);const t=ac.currentTime+(t0||0);g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d)}catch(e){}}
 function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}try{const h=$("#hp");if(h)h.click()}catch(e){}}
 function tAuto(){rs().auto=!rs().auto;save();render()}
-function tStart(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}try{ac&&ac.resume()}catch(e){}
-tm.tot=rs().sec;tm.end=Date.now()+tm.tot*1000;tm.st="run";tm.last=-1;clearInterval(tm.iv);tm.iv=setInterval(tick,250);
+function tStart(sec){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}try{ac&&ac.resume()}catch(e){}
+tm.tot=(typeof sec==="number"&&sec>0)?sec:rs().sec;tm.end=Date.now()+tm.tot*1000;tm.st="run";tm.last=-1;clearInterval(tm.iv);tm.iv=setInterval(tick,250);
 try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>{wl=l}).catch(()=>{})}catch(e){}tDraw();runSc(tm.tot)}
 function tick(){const r=(tm.end-Date.now())/1000;if(r<=0){tDone();return}const c=Math.ceil(r);if(c!==tm.last){tm.last=c;if(c<=3){beep(660,.12);buzz(40)}}tDraw()}
 function tDone(){clearInterval(tm.iv);tm.st="done";try{ac&&ac.resume()}catch(e){}beep(880,.25);beep(880,.25,.4);beep(1175,.5,.8);buzz([300,150,300,150,500]);
@@ -259,6 +260,25 @@ el.innerHTML=h;const n=$("nav");el.style.bottom=(n?n.offsetHeight:64)+"px"}
 window.addEventListener("resize",()=>tDraw());
 function tExt(){rs().ext=!rs().ext;save();render()}
 function runSc(sec){try{const a=document.createElement("a");a.href="shortcuts://run-shortcut?name=Pause&input=text&text="+Math.round(sec);a.style.display="none";document.body.appendChild(a);a.click();a.remove()}catch(e){}}
+function exRest(ex){return((db.restEx||{})[ex])||rs().sec}
+function exR(i,d){const ex=db.draft.entries[i].ex;db.restEx=db.restEx||{};db.restEx[ex]=Math.max(30,Math.min(1800,exRest(ex)+d));save();render()}
+function adjW(i,d){const e=$("#w"+i);let v=parseFloat((e.value||"0").replace(",","."));if(isNaN(v))v=0;e.value=kg(Math.max(0,Math.round((v+d)*100)/100))}
+function adjR(i,d){const e=$("#r"+i);e.value=Math.max(1,(parseInt(e.value)||0)+d)}
+function prevBest(ex,beforeId){let b=0;db.sessions.forEach(s=>{if(s.id<beforeId)s.entries.forEach(e=>{if(e.ex===ex)e.sets.forEach(t=>{const v=e1(t.w,t.r);if(v>b)b=v})})});return b}
+function wkStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/864e5+1)/7)}
+function vWeek(S){const ws=wkStart(new Date()),dn=["M","T","O","T","F","L","S"],cnt={},td=new Date().toDateString();
+S.forEach(s=>{const k=new Date(s.date).toDateString();cnt[k]=(cnt[k]||0)+1});
+let h='<div class="card"><h3>Uke '+isoWeek(new Date())+'</h3><div class="row sp" style="margin-top:8px">';
+for(let i=0;i<7;i++){const d=new Date(ws);d.setDate(ws.getDate()+i);const c=cnt[d.toDateString()]||0;
+h+='<div style="text-align:center;flex:1"><div class="mut">'+dn[i]+'</div><div class="num" style="font-size:18px;width:34px;height:34px;line-height:34px;margin:4px auto 0;border-radius:50%;'+(c?"background:var(--ac);color:#000":"background:var(--bg)")+(d.toDateString()===td?";outline:2px solid var(--mut)":"")+'">'+d.getDate()+"</div></div>"}
+h+="</div>";const wk=[];
+for(let i=7;i>=0;i--){const a=new Date(ws);a.setDate(ws.getDate()-7*i);const b=new Date(a);b.setDate(a.getDate()+7);wk.push({w:isoWeek(a),n:S.filter(s=>{const t=new Date(s.date);return t>=a&&t<b}).length})}
+const mx=Math.max(3,...wk.map(x=>x.n));
+h+='<div class="row" style="align-items:flex-end;margin-top:14px">'+wk.map(x=>'<div style="flex:1;text-align:center"><div style="height:'+Math.max(3,Math.round(x.n/mx*44))+'px;background:'+(x.n?"var(--ac)":"var(--line)")+';border-radius:3px;margin:0 3px"></div><div class="mut" style="font-size:11px">'+x.w+"</div></div>").join("")+'</div><div class="mut" style="margin-top:4px">Økter per uke, siste 8 uker</div></div>';
+return h}
+function bkBanner(){if(!db.sessions.length)return"";const ref=db.lastBackup?new Date(db.lastBackup):new Date(db.sessions[0].date),d=Math.floor((Date.now()-ref)/864e5);if(d<7)return"";
+return'<div class="card" style="border-left:4px solid var(--hl)"><div class="row sp"><div>'+(db.lastBackup?"Siste backup var for "+d+" dager siden.":"Du har ikke tatt backup ennå.")+'</div><button data-t="data" onclick="go(this.dataset.t)">Backup</button></div></div>'}
 function render(){document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
 const sy=window.scrollY;$("#app").className=tab==="data"||tab==="frem"?"sm":"";$("#app").innerHTML=tab==="logg"?vLogg():tab==="prog"?vProg():tab==="data"?vData():vFrem();window.scrollTo(0,sy)}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.t));

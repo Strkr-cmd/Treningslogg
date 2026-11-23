@@ -63,6 +63,14 @@ body.alarm{animation:bf .5s 6}
 @keyframes bf{50%{background:#4a1446}}
 @media (prefers-reduced-motion:reduce){.fl,body.alarm{animation:none}}
 main{padding-bottom:210px}
+main.sm{font-size:15px}
+main.sm h1{font-size:31px}main.sm h2{font-size:22px}main.sm h3{font-size:19px}
+main.sm .mut{font-size:13px}
+main.sm .big{font-size:36px}
+main.sm .chip .num{font-size:20px}
+main.sm [style*="font-size:29px"]{font-size:20px!important}
+main.sm button{font-size:15px;padding:8px 12px}
+main.sm input,main.sm select,main.sm textarea{font-size:16px}
 </style>
 </head>
 <body>
@@ -195,7 +203,7 @@ function edit(id){if(db.draft){nt="Fullfør eller forkast pågående økt først
 function delS(id){if(dz!==id){dz=id;render();return}db.sessions=db.sessions.filter(s=>s.id!==id);dz=0;nt="Slettet økt";save();render()}
 function vData(){const S=db.sessions.slice(-20).reverse();
 return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi (JSON)</h3><p class="mut">Loggen ligger kun i denne visningen. Ta jevnlig backup.</p><div class="row"><button onclick="exJson()">Del / lagre</button><button class="g" onclick="cp(jsonText())">Kopier</button></div><p class="mut">Gjenopprett: velg JSON-fil.</p><input type="file" accept=".json,application/json,text/plain" onchange="imFile(this.files[0])"><p class="mut">Eller lim inn JSON her:</p><textarea id="ij" rows="3" placeholder="Lim inn JSON" style="width:100%;background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit"></textarea><div style="height:8px"></div><button onclick="imTxt()">Importer</button></div>'+
-'<div class="card"><h3>Pausetimer</h3><p class="mut">Pausetid stilles med − og + i timeren nederst (30 sek-steg) og huskes.</p><button class="g" onclick="tAuto()">Start automatisk etter sett: '+((db.rest||{}).auto!==false?"på":"av")+'</button><div style="height:8px"></div><button class="g" onclick="tExt()">Start snarvei «Pause» sammen med pausen: '+((db.rest||{}).ext?"på":"av")+'</button><div style="height:8px"></div><button onclick="runSc(rs().sec)">Test snarvei «Pause»</button><div style="height:8px"></div><a style="display:block;text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--ac);font-weight:600;text-decoration:none" href="shortcuts://run-shortcut?name=Pause&input=text&text=90">Test med vanlig lenke (90 s)</a></div>'+
+'<div class="card"><h3>Pausetimer</h3><p class="mut">Pausetid stilles med − og + i timeren nederst (30 sek-steg) og huskes. «Start pause» starter også Klokke-timeren via snarveien «Pause».</p><button class="g" onclick="tAuto()">Start automatisk etter sett: '+((db.rest||{}).auto!==false?"på":"av")+'</button></div>'+
 '<div class="card"><h3>Endre navn på øvelse</h3><select id="rn0" aria-label="Øvelse">'+ranked().map(x=>'<option value="'+esc(x.n)+'">'+esc(x.n)+"</option>").join("")+'</select><div style="height:8px"></div><input id="rn1" placeholder="Nytt navn" aria-label="Nytt navn"><div style="height:8px"></div><button onclick="renEx()">Endre navn</button></div>'+
 '<div class="card"><h3>Regneark (CSV)</h3><div class="row"><button onclick="exCsv()">Del / lagre</button><button class="g" onclick="cp(csvText())">Kopier</button></div></div>'+
 '<div class="card"><h3>intervals.icu (.fit)</h3>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><div class="row"><button onclick="exFit()">Del / lagre .fit</button><button class="g" onclick="cpFit()">Kopier base64</button></div>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
@@ -236,7 +244,7 @@ function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}try{con
 function tAuto(){rs().auto=!rs().auto;save();render()}
 function tStart(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}try{ac&&ac.resume()}catch(e){}
 tm.tot=rs().sec;tm.end=Date.now()+tm.tot*1000;tm.st="run";tm.last=-1;clearInterval(tm.iv);tm.iv=setInterval(tick,250);
-try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>{wl=l}).catch(()=>{})}catch(e){}tDraw();if(rs().ext)runSc(tm.tot)}
+try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>{wl=l}).catch(()=>{})}catch(e){}tDraw();runSc(tm.tot)}
 function tick(){const r=(tm.end-Date.now())/1000;if(r<=0){tDone();return}const c=Math.ceil(r);if(c!==tm.last){tm.last=c;if(c<=3){beep(660,.12);buzz(40)}}tDraw()}
 function tDone(){clearInterval(tm.iv);tm.st="done";try{ac&&ac.resume()}catch(e){}beep(880,.25);beep(880,.25,.4);beep(1175,.5,.8);buzz([300,150,300,150,500]);
 try{wl&&wl.release()}catch(e){}wl=null;document.body.classList.add("alarm");setTimeout(()=>document.body.classList.remove("alarm"),3200);tDraw()}
@@ -250,9 +258,9 @@ else{h='<div class="tb"><div class="row sp" style="padding:8px 14px"><div class=
 el.innerHTML=h;const n=$("nav");el.style.bottom=(n?n.offsetHeight:64)+"px"}
 window.addEventListener("resize",()=>tDraw());
 function tExt(){rs().ext=!rs().ext;save();render()}
-function runSc(sec){try{location.href="shortcuts://run-shortcut?name=Pause&input=text&text="+Math.round(sec)}catch(e){}}
+function runSc(sec){try{const a=document.createElement("a");a.href="shortcuts://run-shortcut?name=Pause&input=text&text="+Math.round(sec);a.style.display="none";document.body.appendChild(a);a.click();a.remove()}catch(e){}}
 function render(){document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
-const sy=window.scrollY;$("#app").innerHTML=tab==="logg"?vLogg():tab==="prog"?vProg():tab==="data"?vData():vFrem();window.scrollTo(0,sy)}
+const sy=window.scrollY;$("#app").className=tab==="data"||tab==="frem"?"sm":"";$("#app").innerHTML=tab==="logg"?vLogg():tab==="prog"?vProg():tab==="data"?vData():vFrem();window.scrollTo(0,sy)}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.t));
 render();tDraw();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

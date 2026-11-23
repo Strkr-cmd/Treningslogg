@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Styrkelogg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Styrkelogg</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E8EDEF;--card:#F7F9FA;--ink:#13232C;--mut:#5B6D77;--ac:#1B5E7E;--acink:#fff;--hl:#B47A00;--line:#CBD5DA;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101C22;--card:#18272F;--ink:#E6EEF1;--mut:#8FA3AD;--ac:#4FB0D6;--acink:#08171D;--hl:#F0B429;--line:#2A3B44;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101C22;--card:#18272F;--ink:#E6EEF1;--mut:#8FA3AD;--ac:#4FB0D6;--acink:#08171D;--hl:#F0B429;--line:#2A3B44;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 Barlow,system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:560px;margin:0 auto;padding:16px 14px 96px}
+h1,h2,h3,.num{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;margin:0}
+h1{font-size:34px;letter-spacing:.2px;margin-bottom:12px}
+h2{font-size:24px;margin:18px 0 8px}
+h3{font-size:21px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.mut{color:var(--mut);font-size:14px}
+.row{display:flex;gap:8px;align-items:center}
+.row.sp{justify-content:space-between}
+button,select,input{font:inherit;color:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--ac);color:var(--acink);font-weight:600;cursor:pointer}
+button.g{background:transparent;color:var(--ac);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;width:100%}
+.sets{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 4px 2px 10px;display:flex;align-items:center;gap:4px}
+.chip .num{font-size:22px}
+.chip button{padding:2px 8px;background:transparent;color:var(--mut);font-size:18px}
+.pr{color:var(--hl)}
+.big{font-size:40px;line-height:1}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;background:transparent;color:var(--mut);border-radius:0;padding:14px 4px;font-size:15px}
+nav button.on{color:var(--ac);box-shadow:inset 0 3px 0 var(--ac)}
+svg{width:100%;height:auto;display:block}
+:root:root{--bg:#000;--card:#242424;--ink:#fff;--mut:#9b9b9b;--ac:#5AAEFF;--acink:#000;--hl:#F2C12E;--line:#333;color-scheme:dark}
+body{font-size:21px}
+h1{font-size:44px}h2{font-size:31px}h3{font-size:27px}
+.mut{font-size:18px}
+.card{border:0;border-radius:16px;padding:16px}
+.chip .num{font-size:29px}
+.big{font-size:52px}
+button{background:#1E78D2;color:#fff}
+nav button{font-size:20px}
+main{padding-bottom:140px}
+#tm{position:fixed;left:0;right:0;z-index:5}
+.tb{position:relative;background:var(--card);border-top:1px solid var(--line)}
+.tp{height:6px;transition:width .25s linear}
+.tt{font-size:38px;line-height:1.1}
+.fl{background:#D12FC1;color:#fff;animation:fl .6s steps(2) infinite}
+@keyframes fl{50%{background:#F2C12E;color:#000}}
+body.alarm{animation:bf .5s 6}
+@keyframes bf{50%{background:#4a1446}}
+@media (prefers-reduced-motion:reduce){.fl,body.alarm{animation:none}}
+main{padding-bottom:210px}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<label style="position:absolute;opacity:0;pointer-events:none" aria-hidden="true"><input type="checkbox" switch id="hp"></label>
+<nav>
+<button data-t="logg">Økt</button>
+<button data-t="prog">Program</button>
+<button data-t="frem">Fremgang</button>
+<button data-t="data">Data</button>
+</nav>
+<div id="tm"></div>
+<script>
+const P={
+"Push":["Benkpress|4×6–8","Skråbenk hantler|3×8–10","Skulderpress|3×8–10","Sidehev|3×12–15","Triceps pushdown|3×10–12"],
+"Pull":["Markløft|3×5","Pull-ups|4×6–8","Skråro|3×8–10","Face pull|3×12–15","Bicepscurl|3×10–12"],
+"Bein":["Knebøy|4×6–8","Rumensk markløft|3×8–10","Benpress|3×10–12","Utfall|3×10","Tåhev|4×12–15"],
+"Helkropp":["Knebøy|3×5","Benkpress|3×5","Skråro|3×8","Skulderpress|3×8","Planke|3×45 sek"]
+};
+let db={sessions:[],draft:null,custom:[]},tab="logg",sel="",armed=false,msg="",nt="",pk=false,q="",cloud=null,qp=Promise.resolve();
+try{const s=JSON.parse(localStorage.getItem("sl")||"null");if(s&&s.sessions)db=s}catch(e){}db.custom=db.custom||[];if(db.programs){for(const k in P)delete P[k];Object.assign(P,db.programs)}db.programs=P;db.ren=db.ren||{};db.sessions.forEach(s=>{if(s.name==="Tom økt")s.name="Friøkt"});if(db.draft&&db.draft.name==="Tom økt")db.draft.name="Friøkt";
+const save=()=>{try{localStorage.setItem("sl",JSON.stringify(db))}catch(e){}if(cloud){const j=JSON.stringify(db);qp=qp.then(()=>cloud.set({json:j,at:Date.now()})).catch(()=>{})}};
+function merge(o){const ids=new Set(db.sessions.map(s=>s.id));(o.sessions||[]).forEach(s=>{if(!ids.has(s.id))db.sessions.push(s)});db.sessions.sort((a,b)=>a.id-b.id);db.custom=[...new Set([...db.custom,...(o.custom||[])])];if(o.programs)for(const k in o.programs)if(!P[k])P[k]=o.programs[k]}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const e1=(w,r)=>w*(1+r/30);
+const fmt=d=>new Date(d).toLocaleDateString("nb-NO",{day:"numeric",month:"short"});
+const kg=n=>(Math.round(n*10)/10).toString().replace(".",",");
+function lastSets(ex){for(let i=db.sessions.length-1;i>=0;i--){const e=db.sessions[i].entries.find(x=>x.ex===ex);if(e&&e.sets.length)return e.sets}return null}
+function go(t){tab=t;armed=false;nt="";render();window.scrollTo(0,0)}
+function start(n){if(db.draft){go("logg");return}pk=!P[n];db.draft={t0:Date.now(),name:n,entries:(P[n]||[]).map(s=>{const a=s.split("|");return{ex:a[0],t:a[1],sets:[]}})};save();go("logg")}
+function addSet(i){const w=parseFloat($("#w"+i).value.replace(",",".")),r=parseInt($("#r"+i).value);
+if(isNaN(w)||!(r>0)){msg="Fyll inn vekt og reps";render();return}
+msg="";pre=null;db.draft.entries[i].sets.push({w,r});save();render();if(rs().auto)tStart()}
+function rmSet(i,j){db.draft.entries[i].sets.splice(j,1);save();render()}
+function addEx(n){if(!db.draft.entries.some(e=>e.ex===n))db.draft.entries.unshift({ex:n,t:"",sets:[]});pk=false;save();render()}
+function addCustom(n){if(!db.custom.includes(n))db.custom.push(n);addEx(n)}
+const CAT=["Knebøy","Benkpress","Markløft","Skulderpress","Militærpress","Pull-ups","Chins","Skråro","Roing med stang","Nedtrekk","Rumensk markløft","Benpress","Utfall","Bulgarsk splittknebøy","Hip thrust","Tåhev","Sidehev","Face pull","Bicepscurl","Triceps pushdown","Skråbenk hantler","Hantelpress","Dips","Kabelfly","Leg curl","Leg extension","Planke","Farmers walk","Kettlebell swing"];
+function ranked(){const c={};db.sessions.forEach(s=>s.entries.forEach(e=>c[e.ex]=(c[e.ex]||0)+1));return [...new Set([...CAT.map(x=>(db.ren||{})[x]||x),...db.custom,...Object.keys(c)])].map(n=>({n,c:c[n]||0})).sort((a,b)=>b.c-a.c||a.n.localeCompare(b.n,"nb"))}
+function finish(){const en=db.draft.entries.filter(e=>e.sets.length);
+if(!en.length){msg="Logg minst ett sett først";render();return}
+const dm=parseInt($("#dur").value),dur=(dm>0?dm:Math.min(240,Math.max(10,Math.round((Date.now()-(db.draft.t0||Date.now()))/60000))))*60;const ed=db.draft.editId,ix=ed?db.sessions.findIndex(x=>x.id===ed):-1;if(ix>=0){const o=db.sessions[ix],dv=$("#dt")&&$("#dt").value;db.sessions[ix]={id:o.id,date:dv?new Date(dv+"T12:00:00").toISOString():o.date,dur:dm>0?dm*60:o.dur,name:($("#nm")&&$("#nm").value.trim())||o.name,entries:en}}else db.sessions.push({id:Date.now(),date:new Date().toISOString(),dur,name:db.draft.name,entries:en});db.draft=null;msg="";save();sel="";go("frem")}
+function drop(){if(!armed){armed=true;render();return}const ed=db.draft.editId;db.draft=null;save();go(ed?"frem":"logg")}
+function pick(v){sel=v;render()}
+function chart(pts){
+if(pts.length<2)return '<p class="mut">Logg øvelsen i minst to økter for å se kurven.</p>';
+const W=320,H=150,p=26,v=pts.map(x=>x.v);let lo=Math.min(...v),hi=Math.max(...v);if(hi===lo){hi+=1;lo-=1}
+const X=i=>p+i*(W-2*p)/(pts.length-1),Y=y=>H-p-(y-lo)/(hi-lo)*(H-2*p);
+const l=pts.map((q,i)=>X(i)+","+Y(q.v)).join(" ");
+return '<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="Estimert 1RM over tid"><polyline points="'+l+'" fill="none" stroke="var(--ac)" stroke-width="2.5"/>'+
+pts.map((q,i)=>'<circle cx="'+X(i)+'" cy="'+Y(q.v)+'" r="3.5" fill="var(--ac)"/>').join("")+
+'<text x="2" y="'+(Y(hi)+4)+'" font-size="14" fill="var(--mut)">'+Math.round(hi)+'</text><text x="2" y="'+(Y(lo)+4)+'" font-size="14" fill="var(--mut)">'+Math.round(lo)+'</text></svg>'}
+function vLogg(){
+if(!db.draft)return '<h1>Økt</h1><div class="card"><p>Ingen aktiv økt.</p><div class="row"><button onclick="go(\'prog\')">Velg program</button><button class="g" onclick="start(\'Friøkt\')">Friøkt</button></div></div>'+
+(db.sessions.length?'<p class="mut">Sist: '+esc(db.sessions[db.sessions.length-1].name)+", "+fmt(db.sessions[db.sessions.length-1].date)+"</p>":"");
+const d=db.draft;let h='<h1>'+esc(d.name)+"</h1>";if(d.editId)h+='<div class="card"><input id="nm" value="'+esc(d.name)+'" aria-label="Navn"><div style="height:8px"></div><input id="dt" type="date" value="'+day(d.date)+'" aria-label="Dato"></div>';h+="%%PK%%";
+d.entries.forEach((e,i)=>{
+const prev=lastSets(e.ex),cur=(pre&&pre.i===i&&pre)||e.sets[e.sets.length-1]||(prev&&prev[prev.length-1]);
+h+='<div class="card"><div class="row sp"><h3>'+esc(e.ex)+'</h3><span class="mut">'+esc(e.t)+'</span><button class="g" aria-label="Slett øvelse" onclick="rmEx('+i+')">Slett</button></div>'+
+(prev?'<div class="mut">Sist: '+prev.map(s=>kg(s.w)+"×"+s.r).join(", ")+"</div>":"")+
+'<div class="sets">'+e.sets.map((s,j)=>'<span class="chip"><button class="num" style="background:none;color:inherit;padding:2px 4px" aria-label="Rediger sett" onclick="edSet('+i+","+j+')">'+kg(s.w)+" × "+s.r+'</button><button aria-label="Fjern sett" onclick="rmSet('+i+","+j+')">×</button></span>').join("")+"</div>"+
+'<div class="row" style="align-items:flex-end"><div style="flex:1"><div class="mut" style="font-size:14px">kg</div><input id="w'+i+'" inputmode="decimal" placeholder="kg" aria-label="Vekt i kg" value="'+(cur?kg(cur.w):"")+'"></div><div style="flex:1"><div class="mut" style="font-size:14px">reps</div><input id="r'+i+'" inputmode="numeric" placeholder="reps" aria-label="Repetisjoner" value="'+(cur?cur.r:"")+'"></div><button onclick="addSet('+i+')">Legg til sett</button></div></div>'});
+
+const pkh=pk?'<div class="card"><div class="row"><input id="q" placeholder="Søk eller skriv egen øvelse" value="'+esc(q)+'" oninput="q=this.value;$(\'#pl\').innerHTML=plist()"><button class="g" onclick="pk=false;render()">Ferdig</button></div><div id="pl" style="max-height:280px;overflow:auto;margin-top:8px">'+plist()+'</div></div>':'<button class="g" onclick="pk=true;q=\'\';render()">+ Legg til øvelse</button>';h+='<div class="row" style="margin-top:12px"><label class="mut" for="dur">Varighet (min)</label><input id="dur" inputmode="numeric" style="width:90px" placeholder="'+(d.dur?Math.round(d.dur/60):"auto")+'"></div>';
+if(msg)h+='<p class="pr" role="alert">'+msg+"</p>";
+h+='<div class="row" style="margin-top:14px"><button onclick="finish()">'+(d.editId?"Lagre endringer":"Fullfør økt")+'</button><button class="g" onclick="drop()">'+(armed?"Trykk igjen for å forkaste":"Forkast")+"</button></div>";
+return h.replace("%%PK%%",()=>pkh)}
+function vProg(){let h="<h1>Program</h1>";
+for(const n in P){h+='<div class="card"><div class="row sp"><h3>'+n+'</h3><button onclick="start(\''+n+'\')">Start økt</button></div><ul class="mut" style="margin:8px 0 0;padding-left:18px">'+P[n].map(s=>{const a=s.split("|");return"<li>"+a[0]+" – "+a[1]+"</li>"}).join("")+"</ul></div>"}
+return h}
+function vFrem(){const S=db.sessions;let h="<h1>Fremgang</h1>";const vsx=vs&&S.find(x=>x.id===vs);if(vsx)return vDet(vsx);vs=null;
+if(!S.length)return h+'<div class="card"><p>Ingen fullførte økter ennå. Start en økt under Program, så dukker rekorder og kurver opp her.</p></div>';
+const wk=S.filter(s=>Date.now()-new Date(s.date)<7*864e5).length;
+h+='<div class="row"><div class="card" style="flex:1"><div class="num big">'+S.length+'</div><div class="mut">økter totalt</div></div><div class="card" style="flex:1"><div class="num big">'+wk+'</div><div class="mut">siste 7 dager</div></div></div>';
+const exs=[...new Set(S.flatMap(s=>s.entries.map(e=>e.ex)))];if(!exs.includes(sel))sel=exs[0];
+h+='<select aria-label="Velg øvelse" onchange="pick(this.value)">'+exs.map(x=>'<option'+(x===sel?" selected":"")+' value="'+esc(x)+'">'+esc(x)+"</option>").join("")+"</select>";
+const pts=[];let top=null,best=0;
+S.forEach(s=>{const e=s.entries.find(x=>x.ex===sel);if(!e)return;let b=0;e.sets.forEach(t=>{const v=e1(t.w,t.r);if(v>b)b=v;if(!top||t.w>top.w||(t.w===top.w&&t.r>top.r))top=t});if(b>best)best=b;pts.push({v:b})});
+h+='<div class="card" style="margin-top:10px"><div class="mut">Estimert 1RM per økt (kg)</div>'+chart(pts)+"</div>";
+if(top)h+='<div class="row"><div class="card" style="flex:1"><div class="num big pr">'+kg(top.w)+" × "+top.r+'</div><div class="mut">tyngste sett</div></div><div class="card" style="flex:1"><div class="num big pr">'+Math.round(best)+'</div><div class="mut">beste est. 1RM</div></div></div>';
+h+="<h2>Økter</h2>"+(nt?'<p role="status">'+esc(nt)+"</p>":"")+S.slice().reverse().map(s=>{const vol=s.entries.reduce((a,e)=>a+e.sets.reduce((b,t)=>b+t.w*t.r,0),0);return'<div class="card"><div class="row sp" role="button" tabindex="0" style="cursor:pointer" onclick="showS('+s.id+')"><div><b>'+esc(s.name)+'</b><div class="mut">'+fmt(s.date)+" · "+s.entries.length+' øvelser</div></div><div class="num" style="font-size:29px;color:var(--mut)">›</div></div><div class="row" style="margin-top:8px"><button class="g" onclick="edit('+s.id+')">Rediger</button><button class="g" onclick="delS('+s.id+')">'+(dz===s.id?"Trykk igjen for å slette":"Slett")+"</button></div></div>"}).join("");
+return h}
+function plist(){const t=q.trim().toLowerCase(),have=db.draft?db.draft.entries.map(e=>e.ex):[],r=ranked().filter(x=>x.n.toLowerCase().includes(t));
+let h=r.slice(0,40).map(x=>'<button class="g" style="width:100%;text-align:left;margin-bottom:4px"'+(have.includes(x.n)?" disabled":"")+' data-n="'+esc(x.n)+'" onclick="addEx(this.dataset.n)">'+esc(x.n)+(x.c?' <span class="mut">'+x.c+"×</span>":"")+"</button>").join("");
+if(t&&!r.some(x=>x.n.toLowerCase()===t))h='<button style="width:100%;margin-bottom:6px" data-n="'+esc(q.trim())+'" onclick="addCustom(this.dataset.n)">Legg til «'+esc(q.trim())+'» som egen øvelse</button>'+h;
+return h}
+async function dl(name,data){try{const d=await claude.use("downloads");if(!d){nt="Nedlasting er ikke tilgjengelig her";render();return}await d.save({filename:name,data});nt="Lagret "+name}catch(e){nt=e&&e.code==="declined"?"Avbrutt":"Kunne ikke lagre filen"}render()}
+const day=s=>new Date(s).toISOString().slice(0,10);
+function exJson(){dl("styrkelogg-"+day(Date.now())+".json",JSON.stringify({sessions:db.sessions,custom:db.custom},null,1))}
+function imJson(f){if(!f)return;f.text().then(t=>{const o=JSON.parse(t);if(!Array.isArray(o.sessions))throw 0;merge(o);save();nt="Importerte "+o.sessions.length+" økter";render()}).catch(()=>{nt="Ugyldig fil";render()})}
+function exCsv(){const c=v=>'"'+String(v).replace(/"/g,'""')+'"';let o=["Dato","Økt","Øvelse","Sett","Reps","Vekt kg","Volum kg","Est. 1RM kg"].map(c).join(";");
+db.sessions.forEach(s=>s.entries.forEach(e=>e.sets.forEach((t,i)=>{o+="\r\n"+[day(s.date),s.name,e.ex,i+1,t.r,kg(t.w),kg(t.w*t.r),kg(e1(t.w,t.r))].map(c).join(";")})));
+dl("styrkelogg.csv","\uFEFF"+o)}
+function crc32(a){let c=-1;for(const x of a){c^=x;for(let k=0;k<8;k++)c=c&1?(c>>>1)^0xEDB88320:c>>>1}return(c^-1)>>>0}
+function zip(nm,a){const n=[...nm].map(x=>x.charCodeAt(0)),o=[],w=v=>o.push(v&255,(v>>8)&255),w4=v=>{w(v&65535);w(v>>>16)},c=crc32(a),L=a.length;
+w4(0x04034b50);w(20);w(0);w(0);w(0);w(33);w4(c);w4(L);w4(L);w(n.length);w(0);o.push(...n,...a);const off=o.length;
+w4(0x02014b50);w(20);w(20);w(0);w(0);w(0);w(33);w4(c);w4(L);w4(L);w(n.length);w(0);w(0);w(0);w(0);w4(0);w4(0);o.push(...n);const sz=o.length-off;
+w4(0x06054b50);w(0);w(0);w(1);w(1);w4(sz);w4(off);w(0);return new Uint8Array(o)}
+function fit(s){const b=[],u=v=>b.push(v&255),h=v=>{u(v);u(v>>8)},w=v=>{h(v);h(v>>>16)},T=ms=>Math.round(ms/1000)-631065600,def=(l,m,f)=>{u(64|l);u(0);u(0);h(m);u(f.length);f.forEach(x=>{u(x[0]);u(x[1]);u(x[2])})};
+const dur=s.dur||2700,t1=T(new Date(s.date).getTime()),t0=t1-dur,all=s.entries.flatMap(e=>e.sets),st=Math.max(1,Math.floor(dur/all.length));
+def(0,0,[[0,1,0],[1,2,132],[4,4,134]]);u(0);u(4);h(255);w(t0);
+def(1,225,[[253,4,134],[0,4,134],[3,2,132],[4,2,132],[5,1,2],[6,4,134],[254,2,132]]);
+all.forEach((x,i)=>{const ts=t0+i*st,d=Math.min(40,st);u(1);w(ts+d);w(d*1000);h(x.r);h(Math.round(x.w*16));u(1);w(ts);h(i)});
+def(2,18,[[253,4,134],[2,4,134],[7,4,134],[8,4,134],[5,1,0],[6,1,0],[254,2,132]]);u(2);w(t1);w(t0);w(dur*1000);w(dur*1000);u(10);u(20);h(0);
+def(3,34,[[253,4,134],[0,4,134],[1,2,132],[2,1,0],[3,1,0],[4,1,0]]);u(3);w(t1);w(dur*1000);h(1);u(0);u(26);u(1);
+const n=b.length,A=[14,32,84,8,n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255,46,70,73,84,0,0,...b],K=[0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400];
+let c=0;A.forEach(x=>{let t=K[c&15];c=(c>>4)&4095;c=c^t^K[x&15];t=K[c&15];c=(c>>4)&4095;c=c^t^K[(x>>4)&15]});return new Uint8Array([...A,c&255,c>>8])}
+function exFit(){const s=db.sessions.find(x=>String(x.id)===$("#fs").value);if(!s)return;const d=day(s.date);dl("styrkeokt-"+d+".zip",zip("styrkeokt-"+d+".fit",fit(s)))}
+function vData(){const S=db.sessions.slice(-20).reverse();
+return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi</h3><p class="mut">'+(cloud?"Skylagring er på: loggen lagres automatisk på kontoen din i tillegg til nettleseren.":"Lagres i nettleseren. Skylagring slås på når du er innlogget på claude.ai.")+'</p><button onclick="exJson()">Last ned JSON</button><p class="mut">Importer JSON (slås sammen med eksisterende logg):</p><input type="file" accept=".json,application/json" onchange="imJson(this.files[0])"></div>'+
+'<div class="card"><h3>Regneark</h3><p class="mut">CSV åpnes i Excel, Numbers og Google Sheets.</p><button onclick="exCsv()">Last ned CSV</button></div>'+
+'<div class="card"><h3>intervals.icu</h3><p class="mut">FIT-fil med sett, reps, vekt og varighet, pakket i en zip som intervals.icu tar imot.</p>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><button onclick="exFit()">Last ned for intervals.icu</button>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
+let pre=null,dz=0;
+function jsonText(){return JSON.stringify({sessions:db.sessions,custom:db.custom,programs:db.programs,ren:db.ren},null,1)}
+function csvText(){const c=v=>'"'+String(v).replace(/"/g,'""')+'"';let o=["Dato","Økt","Øvelse","Sett","Reps","Vekt kg","Volum kg","Est. 1RM kg"].map(c).join(";");db.sessions.forEach(s=>s.entries.forEach(e=>e.sets.forEach((t,i)=>{o+="\r\n"+[day(s.date),s.name,e.ex,i+1,t.r,kg(t.w),kg(t.w*t.r),kg(e1(t.w,t.r))].map(c).join(";")})));return"\uFEFF"+o}
+async function dl(name,data){const ty=/\.csv$/.test(name)?"text/csv":/\.json$/.test(name)?"application/json":"application/octet-stream";const blob=new Blob([data],{type:ty});try{const f=new File([blob],name,{type:ty});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});nt="Delt "+name;render();return}}catch(e){if(e&&e.name==="AbortError"){nt="Avbrutt";render();return}}
+try{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();nt="Prøvde å laste ned "+name+". Skjedde ingenting, bruk Kopier."}catch(e){nt="Fildeling støttes ikke her. Bruk Kopier."}render()}
+async function cp(t){try{await navigator.clipboard.writeText(t);nt="Kopiert"}catch(e){try{const x=document.createElement("textarea");x.value=t;document.body.appendChild(x);x.select();document.execCommand("copy");x.remove();nt="Kopiert"}catch(e2){nt="Kunne ikke kopiere"}}render()}
+function exJson(){dl("styrkelogg-"+day(Date.now())+".json",jsonText())}
+function exCsv(){dl("styrkelogg.csv",csvText())}
+function fitFor(){const s=db.sessions.find(x=>String(x.id)===$("#fs").value);return s?{s,d:day(s.date)}:null}
+function exFit(){const f=fitFor();if(f)dl("styrkeokt-"+f.d+".fit",fit(f.s))}
+function cpFit(){const f=fitFor();if(f)cp(btoa(String.fromCharCode(...fit(f.s))))}
+function imFile(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!Array.isArray(o.sessions))throw 0;merge(o);save();nt="Importerte "+o.sessions.length+" økter"}catch(e){nt="Ugyldig fil"}render()};r.onerror=()=>{nt="Kunne ikke lese fila";render()};r.readAsText(f)}
+function imTxt(){try{const o=JSON.parse($("#ij").value);if(!Array.isArray(o.sessions))throw 0;merge(o);save();nt="Importerte "+o.sessions.length+" økter"}catch(e){nt="Ugyldig JSON"}render()}
+function edSet(i,j){const s=db.draft.entries[i].sets.splice(j,1)[0];pre={i,w:s.w,r:s.r};save();render()}
+function rmEx(i){db.draft.entries.splice(i,1);pre=null;save();render()}
+function edit(id){if(db.draft){nt="Fullfør eller forkast pågående økt først";render();return}const s=db.sessions.find(x=>x.id===id);if(!s)return;db.draft={editId:id,date:s.date,dur:s.dur,name:s.name,entries:s.entries.map(e=>({ex:e.ex,t:e.t||"",sets:e.sets.map(t=>({w:t.w,r:t.r}))}))};pk=false;save();go("logg")}
+function delS(id){if(dz!==id){dz=id;render();return}db.sessions=db.sessions.filter(s=>s.id!==id);dz=0;nt="Slettet økt";save();render()}
+function vData(){const S=db.sessions.slice(-20).reverse();
+return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi (JSON)</h3><p class="mut">Loggen ligger kun i denne visningen. Ta jevnlig backup.</p><div class="row"><button onclick="exJson()">Del / lagre</button><button class="g" onclick="cp(jsonText())">Kopier</button></div><p class="mut">Gjenopprett: velg JSON-fil.</p><input type="file" accept=".json,application/json,text/plain" onchange="imFile(this.files[0])"><p class="mut">Eller lim inn JSON her:</p><textarea id="ij" rows="3" placeholder="Lim inn JSON" style="width:100%;background:var(--bg);color:inherit;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit"></textarea><div style="height:8px"></div><button onclick="imTxt()">Importer</button></div>'+
+'<div class="card"><h3>Pausetimer</h3><p class="mut">Pausetid stilles med − og + i timeren nederst (30 sek-steg) og huskes.</p><button class="g" onclick="tAuto()">Start automatisk etter sett: '+((db.rest||{}).auto!==false?"på":"av")+'</button><div style="height:8px"></div><button class="g" onclick="tExt()">Start snarvei «Pause» sammen med pausen: '+((db.rest||{}).ext?"på":"av")+'</button><div style="height:8px"></div><button onclick="runSc(rs().sec)">Test snarvei «Pause»</button><div style="height:8px"></div><a style="display:block;text-align:center;border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--ac);font-weight:600;text-decoration:none" href="shortcuts://run-shortcut?name=Pause&input=text&text=90">Test med vanlig lenke (90 s)</a></div>'+
+'<div class="card"><h3>Endre navn på øvelse</h3><select id="rn0" aria-label="Øvelse">'+ranked().map(x=>'<option value="'+esc(x.n)+'">'+esc(x.n)+"</option>").join("")+'</select><div style="height:8px"></div><input id="rn1" placeholder="Nytt navn" aria-label="Nytt navn"><div style="height:8px"></div><button onclick="renEx()">Endre navn</button></div>'+
+'<div class="card"><h3>Regneark (CSV)</h3><div class="row"><button onclick="exCsv()">Del / lagre</button><button class="g" onclick="cp(csvText())">Kopier</button></div></div>'+
+'<div class="card"><h3>intervals.icu (.fit)</h3>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><div class="row"><button onclick="exFit()">Del / lagre .fit</button><button class="g" onclick="cpFit()">Kopier base64</button></div>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
+let pe=null,pr=null,pdz=null;
+function pNew(){pr={name:"Nytt program",rows:[["",""]]};pe="";pdz=null;render()}
+function pEdit(n){pr={name:n,rows:P[n].map(s=>{const a=s.split("|");return[a[0],a[1]||""]})};pe=n;pdz=null;render()}
+function pSync(){pr.name=$("#pn").value;pr.rows=pr.rows.map((r,i)=>[$("#pe"+i).value,$("#pt"+i).value])}
+function pAdd(){pSync();pr.rows.push(["",""]);render()}
+function pRm(i){pSync();pr.rows.splice(i,1);render()}
+function pCancel(){pe=null;pr=null;nt="";render()}
+function pSave(){pSync();const nm=pr.name.trim();if(!nm){nt="Gi programmet et navn";render();return}
+if(nm!==pe&&P[nm]){nt="Det finnes allerede et program med det navnet";render();return}
+const rows=pr.rows.filter(r=>r[0].trim()).map(r=>r[0].trim()+"|"+r[1].trim()),kn=new Set(ranked().map(x=>x.n));
+rows.forEach(r=>{const n=r.split("|")[0];if(!kn.has(n)){db.custom.push(n);kn.add(n)}});
+if(pe&&pe!==nm)delete P[pe];P[nm]=rows;pe=null;pr=null;nt="";save();render()}
+function pDel(){if(pdz!==pe){pdz=pe;render();return}delete P[pe];pe=null;pr=null;pdz=null;save();render()}
+function renEx(){const o=$("#rn0").value,n=$("#rn1").value.trim();if(!o||!n||o===n){nt="Velg øvelse og skriv nytt navn";render();return}
+const f=a=>a.forEach(e=>{if(e.ex===o)e.ex=n});db.sessions.forEach(s=>f(s.entries));if(db.draft)f(db.draft.entries);
+for(const k in P)P[k]=P[k].map(s=>{const a=s.split("|");return(a[0]===o?n:a[0])+"|"+(a[1]||"")});
+db.custom=[...new Set(db.custom.map(x=>x===o?n:x))];db.ren=db.ren||{};for(const k in db.ren)if(db.ren[k]===o)db.ren[k]=n;if(CAT.includes(o))db.ren[o]=n;
+nt="Byttet navn: "+o+" → "+n;save();render()}
+function vProg(){
+if(pr)return '<h1>Program</h1><div class="card"><input id="pn" aria-label="Navn på program" value="'+esc(pr.name)+'">'+pr.rows.map((r,i)=>'<div class="row" style="margin-top:8px"><input id="pe'+i+'" list="dx" placeholder="Øvelse" aria-label="Øvelse" value="'+esc(r[0])+'"><input id="pt'+i+'" placeholder="3×8" aria-label="Sett og reps" style="width:36%" value="'+esc(r[1])+'"><button class="g" aria-label="Fjern" onclick="pRm('+i+')">×</button></div>').join("")+'<datalist id="dx">'+ranked().map(x=>'<option value="'+esc(x.n)+'">').join("")+'</datalist><div class="row" style="margin-top:10px"><button class="g" onclick="pAdd()">+ Øvelse</button></div></div><div class="row"><button onclick="pSave()">Lagre</button><button class="g" onclick="pCancel()">Avbryt</button>'+(pe?'<button class="g" onclick="pDel()">'+(pdz===pe?"Trykk igjen for å slette":"Slett program")+'</button>':"")+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"");
+let h="<h1>Program</h1>";
+for(const n in P){h+='<div class="card"><div class="row sp"><h3>'+esc(n)+'</h3><div class="row"><button class="g" data-n="'+esc(n)+'" onclick="pEdit(this.dataset.n)">Rediger</button><button data-n="'+esc(n)+'" onclick="start(this.dataset.n)">Start</button></div></div><ul class="mut" style="margin:8px 0 0;padding-left:18px">'+P[n].map(s=>{const a=s.split("|");return"<li>"+esc(a[0])+(a[1]?" – "+esc(a[1]):"")+"</li>"}).join("")+"</ul></div>"}
+return h+'<button class="g" onclick="pNew()">+ Nytt program</button>'}
+let vs=null;
+function showS(id){vs=id;render()}
+function vDet(s){const vol=s.entries.reduce((a,e)=>a+e.sets.reduce((b,t)=>b+t.w*t.r,0),0);
+return '<button class="g" onclick="vs=null;render()">← Tilbake</button><h1 style="margin-top:12px">'+esc(s.name)+'</h1><div class="mut" style="margin-bottom:12px">'+fmt(s.date)+(s.dur?" · "+Math.round(s.dur/60)+" min":"")+'</div>'+
+s.entries.map(e=>'<div class="card"><h3>'+esc(e.ex)+'</h3><div class="sets">'+e.sets.map(t=>'<span class="chip" style="padding-right:10px"><span class="num">'+kg(t.w)+" × "+t.r+"</span></span>").join("")+"</div></div>").join("")+
+'<p class="mut">Totalt løftet: '+Math.round(vol).toLocaleString("nb-NO")+' kg</p><div class="row"><button onclick="edit('+s.id+')">Rediger</button></div>'}
+let tm={st:"idle",end:0,tot:0,iv:null,last:-1},ac=null,wl=null;
+function rs(){return db.rest||(db.rest={sec:90,auto:true})}
+function mmss(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function beep(f,d,t0){try{const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);const t=ac.currentTime+(t0||0);g.gain.setValueAtTime(.3,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d)}catch(e){}}
+function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}try{const h=$("#hp");if(h)h.click()}catch(e){}}
+function tAuto(){rs().auto=!rs().auto;save();render()}
+function tStart(){if(!ac){try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}try{ac&&ac.resume()}catch(e){}
+tm.tot=rs().sec;tm.end=Date.now()+tm.tot*1000;tm.st="run";tm.last=-1;clearInterval(tm.iv);tm.iv=setInterval(tick,250);
+try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>{wl=l}).catch(()=>{})}catch(e){}tDraw();if(rs().ext)runSc(tm.tot)}
+function tick(){const r=(tm.end-Date.now())/1000;if(r<=0){tDone();return}const c=Math.ceil(r);if(c!==tm.last){tm.last=c;if(c<=3){beep(660,.12);buzz(40)}}tDraw()}
+function tDone(){clearInterval(tm.iv);tm.st="done";try{ac&&ac.resume()}catch(e){}beep(880,.25);beep(880,.25,.4);beep(1175,.5,.8);buzz([300,150,300,150,500]);
+try{wl&&wl.release()}catch(e){}wl=null;document.body.classList.add("alarm");setTimeout(()=>document.body.classList.remove("alarm"),3200);tDraw()}
+function tStop(){clearInterval(tm.iv);tm.st="idle";try{wl&&wl.release()}catch(e){}wl=null;tDraw()}
+function tAdd(d){if(tm.st==="run"){tm.end+=d*1000;tm.tot+=d}else{rs().sec=Math.max(30,Math.min(1800,rs().sec+d));save()}tDraw()}
+function tDraw(){const el=$("#tm");if(!el)return;const R=rs();let h;
+if(tm.st==="run"){const r=Math.max(0,(tm.end-Date.now())/1000),p=Math.min(100,r/tm.tot*100);
+h='<div class="tb"><div class="tp" style="width:'+p+'%;background:'+(r<=10?"var(--hl)":"var(--ac)")+'"></div><div class="row sp" style="padding:8px 14px"><div class="num tt">'+mmss(r)+'</div><div class="row"><button class="g" onclick="tAdd(30)">+30 s</button><button onclick="tStop()">Stopp</button></div></div></div>'}
+else if(tm.st==="done"){h='<div class="tb fl"><div class="row sp" style="padding:8px 14px"><div class="num tt">Pause ferdig</div><div class="row"><button class="g" onclick="tStart()">Ny</button><button onclick="tStop()">Lukk</button></div></div></div>'}
+else{h='<div class="tb"><div class="row sp" style="padding:8px 14px"><div class="row"><button class="g" aria-label="Kortere pause" onclick="tAdd(-30)">−</button><div class="num tt" style="min-width:96px;text-align:center">'+mmss(R.sec)+'</div><button class="g" aria-label="Lengre pause" onclick="tAdd(30)">+</button></div><button onclick="tStart()">Start pause</button></div></div>'}
+el.innerHTML=h;const n=$("nav");el.style.bottom=(n?n.offsetHeight:64)+"px"}
+window.addEventListener("resize",()=>tDraw());
+function tExt(){rs().ext=!rs().ext;save();render()}
+function runSc(sec){try{location.href="shortcuts://run-shortcut?name=Pause&input=text&text="+Math.round(sec)}catch(e){}}
+function render(){document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+const sy=window.scrollY;$("#app").innerHTML=tab==="logg"?vLogg():tab==="prog"?vProg():tab==="data"?vData():vFrem();window.scrollTo(0,sy)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.t));
+render();tDraw();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+</script>
+</body>
+</html>

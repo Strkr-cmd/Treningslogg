@@ -59,9 +59,9 @@ main{padding-bottom:140px}
 .tt{font-size:38px;line-height:1.1}
 .fl{background:#D12FC1;color:#fff;animation:fl .6s steps(2) infinite}
 @keyframes fl{50%{background:#F2C12E;color:#000}}
-body.alarm{animation:bf .5s 6}
-@keyframes bf{50%{background:#4a1446}}
-@media (prefers-reduced-motion:reduce){.fl,body.alarm{animation:none}}
+body.alarm::before{animation:bf .5s 6}
+@keyframes bf{50%{filter:hue-rotate(110deg) brightness(1.7)}}
+@media (prefers-reduced-motion:reduce){.fl,body.alarm::before{animation:none}}
 main{padding-bottom:210px}
 main.sm{font-size:15px}
 main.sm h1{font-size:31px}main.sm h2{font-size:22px}main.sm h3{font-size:19px}
@@ -71,6 +71,33 @@ main.sm .chip .num{font-size:20px}
 main.sm [style*="font-size:29px"]{font-size:20px!important}
 main.sm button{font-size:15px;padding:8px 12px}
 main.sm input,main.sm select,main.sm textarea{font-size:16px}
+
+/* ===== Liquid glass ===== */
+html{background:#05070d}
+body{background:transparent;position:relative}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(70% 45% at 10% 0%,rgba(40,120,255,.50),transparent 70%),radial-gradient(55% 40% at 100% 28%,rgba(150,80,255,.34),transparent 70%),radial-gradient(70% 45% at 0% 100%,rgba(0,200,210,.30),transparent 70%),radial-gradient(60% 40% at 100% 100%,rgba(40,120,255,.25),transparent 70%),#05070d}
+:root:root{--mut:rgba(235,242,255,.62);--line:rgba(255,255,255,.14)}
+.card,nav,.tb{background:linear-gradient(135deg,rgba(255,255,255,.17),rgba(255,255,255,.05) 45%,rgba(255,255,255,.08));-webkit-backdrop-filter:blur(26px) saturate(185%);backdrop-filter:blur(26px) saturate(185%);border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -1px 0 rgba(255,255,255,.06),0 10px 34px rgba(0,0,0,.38)}
+.card{border-radius:26px;padding:16px}
+button{background:linear-gradient(180deg,rgba(110,185,255,.62),rgba(30,120,210,.62));color:#fff;border:1px solid rgba(255,255,255,.38);border-radius:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 14px rgba(20,90,200,.35);text-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .12s,filter .12s}
+button:active{transform:scale(.97);filter:brightness(1.12)}
+button.g{background:rgba(255,255,255,.09);color:#dcecff;border:1px solid rgba(255,255,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);text-shadow:none}
+button:disabled{opacity:.45}
+.chip button{background:none;border:0;box-shadow:none;text-shadow:none;border-radius:8px}
+input,select,textarea{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35);color:#fff}
+.chip{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+[style*="background:var(--bg)"]{background:rgba(255,255,255,.1)!important}
+nav{left:12px;right:12px;max-width:536px;margin:0 auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));height:64px;padding:5px;gap:4px;border-radius:32px}
+nav button{background:transparent;border:0;box-shadow:none;text-shadow:none;border-radius:27px;padding:0;color:var(--mut)}
+nav button.on{background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.1));color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 2px 10px rgba(0,0,0,.3)}
+#tm{left:12px;right:12px;max-width:536px;margin:0 auto;bottom:calc(env(safe-area-inset-bottom,0px) + 84px)}
+.tb{border-radius:30px;overflow:hidden}
+.tb>.row{padding:8px 12px 8px 20px!important}
+.tp{height:4px;box-shadow:0 0 10px rgba(90,174,255,.8)}
+.tb.fl{background:linear-gradient(135deg,#D12FC1,#8a2be2);color:#fff;animation:fl .6s steps(2) infinite}
+@supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){.card,nav,.tb{background:rgba(36,40,52,.92)}}
+@media (prefers-reduced-transparency:reduce){.card,nav,.tb{background:rgba(30,34,44,.96);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media (prefers-reduced-motion:reduce){.tb.fl{animation:none}}
 </style>
 </head>
 <body>
@@ -256,7 +283,7 @@ if(tm.st==="run"){const r=Math.max(0,(tm.end-Date.now())/1000),p=Math.min(100,r/
 h='<div class="tb"><div class="tp" style="width:'+p+'%;background:'+(r<=10?"var(--hl)":"var(--ac)")+'"></div><div class="row sp" style="padding:8px 14px"><div class="num tt">'+mmss(r)+'</div><div class="row"><button class="g" onclick="tAdd(30)">+30 s</button><button onclick="tStop()">Stopp</button></div></div></div>'}
 else if(tm.st==="done"){h='<div class="tb fl"><div class="row sp" style="padding:8px 14px"><div class="num tt">Pause ferdig</div><div class="row"><button class="g" onclick="tStart()">Ny</button><button onclick="tStop()">Lukk</button></div></div></div>'}
 else{h='<div class="tb"><div class="row sp" style="padding:8px 14px"><div class="row"><button class="g" aria-label="Kortere pause" onclick="tAdd(-30)">−</button><div style="text-align:center;min-width:96px"><div class="num tt">'+mmss(bR())+'</div>'+(ce()?'<div class="mut" style="font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(ce())+'</div>':"")+'</div><button class="g" aria-label="Lengre pause" onclick="tAdd(30)">+</button></div><button onclick="tStart()">Start pause</button></div></div>'}
-el.innerHTML=h;const n=$("nav");el.style.bottom=(n?n.offsetHeight:64)+"px"}
+el.innerHTML=h}
 window.addEventListener("resize",()=>tDraw());
 function tExt(){rs().ext=!rs().ext;save();render()}
 function runSc(sec){try{const a=document.createElement("a");a.href="shortcuts://run-shortcut?name=Pause&input=text&text="+Math.round(sec);a.style.display="none";document.body.appendChild(a);a.click();a.remove()}catch(e){}}

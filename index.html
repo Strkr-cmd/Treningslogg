@@ -198,15 +198,52 @@ function zip(nm,a){const n=[...nm].map(x=>x.charCodeAt(0)),o=[],w=v=>o.push(v&25
 w4(0x04034b50);w(20);w(0);w(0);w(0);w(33);w4(c);w4(L);w4(L);w(n.length);w(0);o.push(...n,...a);const off=o.length;
 w4(0x02014b50);w(20);w(20);w(0);w(0);w(0);w(33);w4(c);w4(L);w4(L);w(n.length);w(0);w(0);w(0);w(0);w4(0);w4(0);o.push(...n);const sz=o.length-off;
 w4(0x06054b50);w(0);w(0);w(1);w(1);w4(sz);w4(off);w(0);return new Uint8Array(o)}
-function fit(s){const b=[],u=v=>b.push(v&255),h=v=>{u(v);u(v>>8)},w=v=>{h(v);h(v>>>16)},T=ms=>Math.round(ms/1000)-631065600,def=(l,m,f)=>{u(64|l);u(0);u(0);h(m);u(f.length);f.forEach(x=>{u(x[0]);u(x[1]);u(x[2])})};
-const dur=s.dur||2700,t1=T(new Date(s.date).getTime()),t0=t1-dur,all=s.entries.flatMap(e=>e.sets),st=Math.max(1,Math.floor(dur/all.length));
-def(0,0,[[0,1,0],[1,2,132],[4,4,134]]);u(0);u(4);h(255);w(t0);
-def(1,225,[[253,4,134],[0,4,134],[3,2,132],[4,2,132],[5,1,2],[6,4,134],[254,2,132]]);
-all.forEach((x,i)=>{const ts=t0+i*st,d=Math.min(40,st);u(1);w(ts+d);w(d*1000);h(x.r);h(Math.round(x.w*16));u(1);w(ts);h(i)});
-def(2,18,[[253,4,134],[2,4,134],[7,4,134],[8,4,134],[5,1,0],[6,1,0],[254,2,132]]);u(2);w(t1);w(t0);w(dur*1000);w(dur*1000);u(10);u(20);h(0);
-def(3,34,[[253,4,134],[0,4,134],[1,2,132],[2,1,0],[3,1,0],[4,1,0]]);u(3);w(t1);w(dur*1000);h(1);u(0);u(26);u(1);
-const n=b.length,A=[14,32,84,8,n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255,46,70,73,84,0,0,...b],K=[0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400];
-let c=0;A.forEach(x=>{let t=K[c&15];c=(c>>4)&4095;c=c^t^K[x&15];t=K[c&15];c=(c>>4)&4095;c=c^t^K[(x>>4)&15]});return new Uint8Array([...A,c&255,c>>8])}
+function fitCat(ex){const n=String(ex||"").toLowerCase();
+const m=[[/leg curl|lårcurl|hamstring curl/,15],[/leg extension|beinstrekk/,65534],[/rumensk|romanian|markløft|deadlift/,8],[/face pull/,23],[/skråbenk|benkpress|bench|hantelpress|brystpress|chest press/,0],[/hip thrust|hofteløft/,10],[/tåhev|calf/,1],[/kabelfly|flye|fly\b/,9],[/utfall|lunge/,17],[/bulgarsk|knebøy|squat|benpress|leg press|hack/,28],[/skulderpress|militærpress|shoulder press|overhead press/,24],[/sidehev|lateral raise/,14],[/pull.?up|chin|nedtrekk|pulldown/,21],[/skråro|roing|row/,23],[/curl/,7],[/triceps|dips?|pushdown/,30],[/planke|plank/,19],[/farmers|carry/,3],[/swing/,12],[/shrug/,26],[/sit.?up|crunch/,6],[/push.?up|armhev/,22]];
+for(const [r,c] of m)if(r.test(n))return c;return 65534}
+function fit(s){
+const o=[],u8=v=>o.push(v&255),u16=v=>{u8(v);u8(v>>>8)},u32=v=>{u16(v&65535);u16(v>>>16)},
+def=(l,g,f)=>{u8(64|l);u8(0);u8(0);u16(g);u8(f.length);f.forEach(x=>{u8(x[0]);u8(x[1]);u8(x[2])})},
+EN=0,U8=2,U16=132,U32=134,U32Z=140,INV=65535,
+T=ms=>Math.max(0,Math.floor(ms/1000)-631065600);
+const dur=Math.max(60,Math.round(s.dur||2700)),endMs=new Date(s.date).getTime(),end=T(endMs),start=end-dur;
+const all=[];s.entries.forEach(e=>e.sets.forEach(t=>all.push({c:fitCat(e.ex),w:Number(t.w)||0,r:Math.round(Number(t.r))||0})));
+if(!all.length)throw new Error("Økten har ingen sett");
+const localEnd=end-new Date(endMs).getTimezoneOffset()*60;
+// File ID
+def(0,0,[[0,1,EN],[1,2,U16],[2,2,U16],[3,4,U32Z],[4,4,U32]]);
+u8(0);u8(4);u16(255);u16(0);u32((start>>>0)||1);u32(start);
+// Event: timer start
+def(1,21,[[253,4,U32],[0,1,EN],[1,1,EN],[4,1,U8]]);
+u8(1);u32(start);u8(0);u8(0);u8(0);
+// Record at start
+def(2,20,[[253,4,U32]]);u8(2);u32(start);
+// Sets (active + rest) in time order
+def(3,225,[[254,4,U32],[0,4,U32],[6,4,U32],[3,2,U16],[4,2,U16],[5,1,EN],[7,6,U16],[8,6,U16],[9,2,U16],[10,2,U16]]);
+const slot=dur/all.length;let idx=0;
+const setMsg=(ts,d,st,reps,w,type,cat)=>{u8(3);u32(ts);u32(d*1000);u32(st);u16(reps);u16(w);u8(type);
+u16(cat);u16(INV);u16(INV);u16(INV);u16(INV);u16(INV);u16(type?1:INV);u16(idx++)};
+all.forEach((x,i)=>{
+const a=Math.min(end,Math.max(start,Math.round(start+i*slot))),act=Math.max(1,Math.min(60,Math.round(slot*0.55))),b=Math.min(end,a+act);
+setMsg(b,Math.max(1,b-a),a,Math.max(0,Math.min(65534,x.r)),Math.max(0,Math.min(65534,Math.round(x.w*16))),1,x.c);
+if(i<all.length-1){const nx=Math.min(end,Math.round(start+(i+1)*slot));if(nx>b)setMsg(nx,nx-b,b,INV,INV,0,INV)}});
+// Record + timer stop
+u8(2);u32(end);
+u8(1);u32(end);u8(0);u8(4);u8(0);
+// Lap
+def(4,19,[[254,2,U16],[253,4,U32],[0,1,EN],[1,1,EN],[2,4,U32],[7,4,U32],[8,4,U32],[25,1,EN],[39,1,EN]]);
+u8(4);u16(0);u32(end);u8(9);u8(1);u32(start);u32(dur*1000);u32(dur*1000);u8(10);u8(20);
+// Session
+def(5,18,[[254,2,U16],[253,4,U32],[0,1,EN],[1,1,EN],[2,4,U32],[5,1,EN],[6,1,EN],[7,4,U32],[8,4,U32],[25,2,U16],[26,2,U16]]);
+u8(5);u16(0);u32(end);u8(8);u8(1);u32(start);u8(10);u8(20);u32(dur*1000);u32(dur*1000);u16(0);u16(1);
+// Activity
+def(6,34,[[253,4,U32],[0,4,U32],[1,2,U16],[2,1,EN],[3,1,EN],[4,1,EN],[5,4,U32]]);
+u8(6);u32(end);u32(dur*1000);u16(1);u8(0);u8(26);u8(1);u32(localEnd);
+const K=[0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400],
+crc=a=>{let c=0;for(const x of a){let t=K[c&15];c=(c>>4)&4095;c=c^t^K[x&15];t=K[c&15];c=(c>>4)&4095;c=c^t^K[(x>>4)&15]}return c},
+n=o.length,H=[14,32,102,8,n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255,46,70,73,84],hc=crc(H),
+B=[...H,hc&255,hc>>>8,...o],fc=crc(B);B.push(fc&255,fc>>>8);
+return new Uint8Array(B)}
 function exFit(){const s=db.sessions.find(x=>String(x.id)===$("#fs").value);if(!s)return;const d=day(s.date);dl("styrkeokt-"+d+".zip",zip("styrkeokt-"+d+".fit",fit(s)))}
 function vData(){const S=db.sessions.slice(-20).reverse();
 return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi</h3><p class="mut">'+(cloud?"Skylagring er på: loggen lagres automatisk på kontoen din i tillegg til nettleseren.":"Lagres i nettleseren. Skylagring slås på når du er innlogget på claude.ai.")+'</p><button onclick="exJson()">Last ned JSON</button><p class="mut">Importer JSON (slås sammen med eksisterende logg):</p><input type="file" accept=".json,application/json" onchange="imJson(this.files[0])"></div>'+
@@ -234,7 +271,7 @@ return '<h1>Data</h1><div class="card"><h3>Sikkerhetskopi (JSON)</h3><p class="m
 '<div class="card"><h3>Pausetimer</h3><p class="mut">Pausetid stilles med − og + i timeren nederst (30 sek-steg) og huskes. «Start pause» starter også Klokke-timeren via snarveien «Pause».</p><button class="g" onclick="tAuto()">Start automatisk etter sett: '+((db.rest||{}).auto!==false?"på":"av")+'</button><div style="height:8px"></div><button class="g" onclick="tBar()">Vis stor timer: '+((db.rest||{}).bar===false?"av":"på")+'</button></div>'+
 '<div class="card"><h3>Endre navn på øvelse</h3><select id="rn0" aria-label="Øvelse">'+ranked().map(x=>'<option value="'+esc(x.n)+'">'+esc(x.n)+"</option>").join("")+'</select><div style="height:8px"></div><input id="rn1" placeholder="Nytt navn" aria-label="Nytt navn"><div style="height:8px"></div><button onclick="renEx()">Endre navn</button></div>'+
 '<div class="card"><h3>Regneark (CSV)</h3><div class="row"><button onclick="exCsv()">Del / lagre</button><button class="g" onclick="cp(csvText())">Kopier</button></div></div>'+
-'<div class="card"><h3>intervals.icu (.fit)</h3>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><div class="row"><button onclick="exFit()">Del / lagre .fit</button><button class="g" onclick="cpFit()">Kopier base64</button></div>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
+'<div class="card"><h3>Eksporter økt (.fit)</h3><p class="mut">FIT-aktivitet med sett, reps, vekt og øvelsestype. Brukes på Garmin Connect, Strava og intervals.icu. Importen gjøres på nettsiden deres.</p>'+(S.length?'<select id="fs" aria-label="Velg økt">'+S.map(s=>'<option value="'+s.id+'">'+fmt(s.date)+" – "+esc(s.name)+"</option>").join("")+'</select><div style="height:8px"></div><div class="row"><button onclick="exFit()">Del / lagre .fit</button><button class="g" onclick="cpFit()">Kopier base64</button></div>':'<p class="mut">Fullfør en økt først.</p>')+'</div>'+(nt?'<p role="status">'+esc(nt)+"</p>":"")}
 let pe=null,pr=null,pdz=null;
 function pNew(){pr={name:"Nytt program",rows:[["",""]]};pe="";pdz=null;render()}
 function pEdit(n){pr={name:n,rows:P[n].map(s=>{const a=s.split("|");return[a[0],a[1]||""]})};pe=n;pdz=null;render()}
